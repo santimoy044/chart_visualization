@@ -1,29 +1,26 @@
 import mysql.connector
 from mysql.connector import Error
-import os, logging
+import os
+import logging
 from dotenv import load_dotenv
-
 
 # Load environment variables
 load_dotenv()
 
-
-# Database configuration
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'database': os.getenv('DB_NAME'),
-    'port': int(os.getenv('DB_PORT', 3306))
-}
-
-
-# Set up logging
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# DB configuration
+DB_CONFIG = {
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASSWORD', 'root'),
+    'database': os.getenv('DB_NAME', 'employeeinfo'),
+    'port': int(os.getenv('DB_PORT', 3306))
+}
 
-# Connect to DB
+# Get DB connection
 def get_db_connection():
     try:
         connection = mysql.connector.connect(**DB_CONFIG)
@@ -32,8 +29,7 @@ def get_db_connection():
             return connection
     except Error as e:
         logger.error(f"Error connecting to MySQL: {e}")
-        return None
-
+    return None
 
 # Close DB connection
 def close_db_connection(connection):
@@ -41,24 +37,30 @@ def close_db_connection(connection):
         connection.close()
         logger.info("Database connection closed")
 
-
-# Query execution
+# Execute SELECT/INSERT/UPDATE queries
 def execute_query(query, params=None):
     db_connection = get_db_connection()
-
     if not db_connection:
         return None, "Database connection failed"
 
     try:
         cursor = db_connection.cursor(dictionary=True)
         cursor.execute(query, params or ())
-        result = cursor.fetchall()
+
+        # For SELECT queries
+        if query.strip().lower().startswith("select"):
+            result = cursor.fetchall()
+        else:
+            db_connection.commit()
+            result = cursor.rowcount
+
         return result, None
 
     except Error as e:
         logger.error(f"MySQL query error: {e}")
         return None, str(e)
+
     finally:
         if db_connection.is_connected():
             cursor.close()
-            db_connection.close()
+            close_db_connection(db_connection)

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from db import connect_to_db, close_db_connection
+from database import get_db_connection, close_db_connection
 
 # Create a Blueprint for API routes
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -7,8 +7,8 @@ api = Blueprint('api', __name__, url_prefix='/api')
 @api.route('/exception_piechart', methods=['GET'])
 def get_exception_piechart():
     time_range = request.args.get('time_range', 'all')  # default is 'all'
-    
-    conn = connect_to_db()
+
+    conn = get_db_connection()
     if conn is None:
         return jsonify({"error": "Failed to connect to the database"}), 500
 
