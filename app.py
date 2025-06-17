@@ -3,11 +3,13 @@ from routes import api
 from export_routes import export_bp
 import os
 from dotenv import load_dotenv
+from flask_cors import CORS
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)  # This will enable CORS for all routes
 
 # Register Blueprints
 app.register_blueprint(api)
