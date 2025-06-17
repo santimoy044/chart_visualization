@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from database import get_db_connection, close_db_connection
 from datetime import datetime, timedelta
 import calendar
+from collections import Counter
 
 # Create a Blueprint for API routes
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -33,6 +34,71 @@ def get_date_range(range_type: str, date_str: str):
     
     return start_date, end_date
 
+
+@api.route('/', methods=['GET'])
+def get_user_exception_counts():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Failed to connect to the database"}), 500
+
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        SELECT Username, COUNT(*) AS exception_count
+        FROM exception_logs
+        GROUP BY Username
+        """
+        cursor.execute(query)
+        result = cursor.fetchall()
+
+        usernames = [row[0] for row in result]
+        exception_counts = [row[1] for row in result]
+
+        return jsonify({
+            'usernames': usernames,
+            'exception_counts': exception_counts
+        })
+    except Exception as e:
+        print(f"DB Query Error: {e}")
+        return jsonify({"error": "Failed to fetch data from DB"}), 500
+    finally:
+        cursor.close()
+        close_db_connection(conn)
+
+@api.route('/plot-exceptions', methods=['GET'])
+def plot_exceptions():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Failed to connect to the database"}), 500
+
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT time_occurred, Exception_Type FROM exception_logs")
+        rows = cursor.fetchall()
+
+        time_stamps = [row[0].strftime("%Y-%m-%d %H:%M:%S") for row in rows]
+
+        counter = Counter(time_stamps)
+        x = list(counter.keys())
+        y = list(counter.values())
+
+        max_count = max(y) if y else 0
+        max_time = x[y.index(max_count)] if y else None
+
+        return jsonify({
+            'x': x,
+            'y': y,
+            'max_count': max_count,
+            'max_time': max_time
+        })
+    except Exception as e:
+        print(f"DB Query Error: {e}")
+        return jsonify({"error": "Failed to fetch data from DB"}), 500
+    finally:
+        cursor.close()
+        close_db_connection(conn)
 
 @api.route('/exception_piechart', methods=['GET'])
 def get_exception_piechart():

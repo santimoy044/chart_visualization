@@ -8,6 +8,7 @@ from database import execute_query
 # All routes in this blueprint will have '/export' as their URL prefix.
 export_bp = Blueprint('export', __name__, url_prefix='/export')
 
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
